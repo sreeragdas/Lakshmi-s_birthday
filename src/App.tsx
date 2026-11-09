@@ -140,6 +140,7 @@ function App() {
   const [wishSubmitting, setWishSubmitting] = useState(false)
   const [wishStatus, setWishStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const wishRequestInFlight = useRef(false)
+  const wishFormRef = useRef<HTMLFormElement>(null)
   const [dodgePosition, setDodgePosition] = useState({ x: 0, y: 0 })
   const playgroundRef = useRef<HTMLDivElement>(null)
 
@@ -542,7 +543,7 @@ function App() {
               <h2>Leave a wish <em>for us.</em></h2>
               <p>Add a birthday wish or a sweet little promise to keep.</p>
             </div>
-            <form className="wish-form" onSubmit={addWish}>
+            <form className="wish-form" onSubmit={addWish} ref={wishFormRef}>
               <label className="visually-hidden" htmlFor="birthday-wish">Your birthday wish</label>
               <input
                 id="birthday-wish"
@@ -553,7 +554,12 @@ function App() {
                 required
                 value={wish}
               />
-              <button className="button button-primary" disabled={wishSubmitting} type="submit">
+              <button
+                className="button button-primary"
+                disabled={wishSubmitting}
+                onClick={() => wishFormRef.current?.requestSubmit()}
+                type="button"
+              >
                 {wishSubmitting ? 'Sending…' : 'Add your wish'} <span aria-hidden="true">♡</span>
               </button>
             </form>
