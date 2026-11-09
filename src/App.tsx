@@ -137,6 +137,9 @@ function App() {
   const [candleBlown, setCandleBlown] = useState(false)
   const [wish, setWish] = useState('')
   const [wishes, setWishes] = useState(initialWishes)
+  const [wishSubmitting, setWishSubmitting] = useState(false)
+  const [wishStatus, setWishStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const wishRequestInFlight = useRef(false)
   const [dodgePosition, setDodgePosition] = useState({ x: 0, y: 0 })
   const playgroundRef = useRef<HTMLDivElement>(null)
 
@@ -162,12 +165,59 @@ function App() {
     })
   }
 
-  const addWish = (event: FormEvent<HTMLFormElement>) => {
+  const addWish = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (wishRequestInFlight.current) return
+
     const message = wish.trim()
-    if (!message) return
-    setWishes((current) => [...current, { name: 'A birthday wish', message }])
-    setWish('')
+    if (!message) {
+      setWishStatus({ type: 'error', message: 'Please write a wish before sending.' })
+      return
+    }
+
+    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY
+    if (!accessKey) {
+      setWishStatus({ type: 'error', message: 'Wish emails are not configured yet. Please try again later.' })
+      return
+    }
+
+    wishRequestInFlight.current = true
+    setWishSubmitting(true)
+    setWishStatus(null)
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: accessKey,
+          subject: 'A new birthday wish for Lakshmi',
+          from_name: 'Birthday website memory jar',
+          message,
+          submitted_at: new Date().toISOString(),
+        }),
+      })
+
+      const result: unknown = await response.json()
+      if (!response.ok || !result || typeof result !== 'object' || !('success' in result) || result.success !== true) {
+        const apiMessage = result && typeof result === 'object' && 'message' in result
+          && typeof result.message === 'string'
+          ? result.message
+          : `The email service returned status ${response.status}.`
+        setWishStatus({ type: 'error', message: `Your wish could not be sent. ${apiMessage}` })
+        return
+      }
+
+      setWishes((current) => [...current, { name: 'A birthday wish', message }])
+      setWish('')
+      setWishStatus({ type: 'success', message: 'Your wish was sent with love. Thank you!' })
+    } catch (error) {
+      const details = error instanceof Error ? error.message : 'Network request failed.'
+      setWishStatus({ type: 'error', message: `Your wish could not be sent. ${details}` })
+    } finally {
+      wishRequestInFlight.current = false
+      setWishSubmitting(false)
+    }
   }
 
   const answerLoveQuiz = (answer: string) => {
@@ -497,12 +547,24 @@ function App() {
               <input
                 id="birthday-wish"
                 maxLength={180}
+                disabled={wishSubmitting}
                 onChange={(event) => setWish(event.target.value)}
                 placeholder="Write something lovely…"
+                required
                 value={wish}
               />
-              <button className="button button-primary" type="submit">Add your wish <span aria-hidden="true">♡</span></button>
+              <button className="button button-primary" disabled={wishSubmitting} type="submit">
+                {wishSubmitting ? 'Sending…' : 'Add your wish'} <span aria-hidden="true">♡</span>
+              </button>
             </form>
+            {wishStatus && (
+              <p
+                className={`wish-status wish-status-${wishStatus.type}`}
+                role={wishStatus.type === 'error' ? 'alert' : 'status'}
+              >
+                {wishStatus.message}
+              </p>
+            )}
             <div className="wishes-list" aria-live="polite">
               {wishes.map((item, index) => (
                 <article className="wish-note" key={`${item.name}-${index}`}>

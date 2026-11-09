@@ -1064,6 +1064,28 @@ h2 {
   color: #b29690;
 }
 
+.wish-form input:disabled,
+.wish-form .button:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.wish-status {
+  max-width: 44rem;
+  margin: 0 auto 1rem;
+  font-size: .82rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.wish-status-success {
+  color: #426d4a;
+}
+
+.wish-status-error {
+  color: #9a4f56;
+}
+
 .wish-form .button {
   flex-shrink: 0;
 }
