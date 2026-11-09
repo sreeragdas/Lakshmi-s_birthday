@@ -32,7 +32,12 @@ jobs:
       - name: Build app
         env:
           VITE_WEB3FORMS_ACCESS_KEY: ${{ secrets.VITE_WEB3FORMS_ACCESS_KEY }}
-        run: npm run build
+        run: |
+          if [ -z "$VITE_WEB3FORMS_ACCESS_KEY" ]; then
+            echo "::error::Add the VITE_WEB3FORMS_ACCESS_KEY repository secret before deploying."
+            exit 1
+          fi
+          npm run build
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
